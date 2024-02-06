@@ -5,12 +5,15 @@ using UnityEngine;
 public class ProjectileScript : MonoBehaviour
 {
     public GameObject owner;
+    public GameObject explodeFXPrefab;
     public Vector3 thrust;
     public Quaternion heading;
     public float lifeTime;
     private float timeElapse;
 
     public AudioClip deathKnell;
+
+    private bool disabled = false;
 
     // Use this for initialization
     void Start() {
@@ -37,6 +40,11 @@ public class ProjectileScript : MonoBehaviour
 
     void OnCollisionEnter(Collision collision)
     {
+        if (disabled) {
+            return;
+        } else {
+            disabled = true;
+        }
         // the Collision contains a lot of info, but it’s the colliding
         // object we’re most interested in.
         Collider collider = collision.collider;
@@ -83,6 +91,11 @@ public class ProjectileScript : MonoBehaviour
 
     public void Die()
     {
-        Destroy(gameObject);
+        //Destroy(gameObject);
+        Vector3 spawnPos = gameObject.transform.position;
+        GameObject obj = Instantiate(explodeFXPrefab) as GameObject;
+        obj.transform.position = spawnPos;
+
+        //GetComponent<Rigidbody>().useGravity = true;
     }
 }

@@ -16,12 +16,11 @@ public class GlobalScript : MonoBehaviour
         {2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
     };
 
-    Color[] typeColor = {Color.red, Color.yellow, Color.green};
+    
     float attackTimer;
     float UFOSpawnTimer;
-    float moveTimer;
     float movingDirec = -1.0f;
-    int movingStep = 0;
+    float movingStep = 0.0f;
     
 
     int row = 5;
@@ -30,8 +29,8 @@ public class GlobalScript : MonoBehaviour
     
     public float attackDelta;
     public float UFOSpawnDelta;
-    public float moveDelta;
-    public int movingBound = 3;
+    public float moveDelta = 0.05f;
+    public float movingBound = 10.0f;
 
     public Vector3 spawnOrigin;
     public GameObject[,] enemySeq;
@@ -47,21 +46,21 @@ public class GlobalScript : MonoBehaviour
         UFOSpawnTimer = 0;
         // Create Enemy Array
 
-        Material m_Material;
-
         enemySeq = new GameObject[row, col];
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
-                Vector3 spawnPos = new Vector3(j*1.5f, 0.0f, i*1.5f);
                 GameObject enemy = Instantiate(enemyPrefab) as GameObject;
-                enemy.transform.position = spawnPos + spawnOrigin;
                 enemy.GetComponent<EnemyScript>().type = spawnTypes[i, j];
-                m_Material = enemy.GetComponent<Renderer>().material;
-                m_Material.color = typeColor[spawnTypes[i, j]];
                 enemySeq[i, j] = enemy;
-                //ProjectileScript p = obj.GetComponent<ProjectileScript>();
+                /*
+                Material m_Material;
+                //enemy.GetComponent<Rigidbody>().detectCollisions = false;
+                m_Material = enemy.transform.GetChild(0).gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material;
+                m_Material.color = typeColor[spawnTypes[i, j]];
+                */
             }
         }
+        moveEnemies();
           
     }
 
@@ -70,7 +69,6 @@ public class GlobalScript : MonoBehaviour
     {
         attackTimer += Time.deltaTime;
         UFOSpawnTimer += Time.deltaTime;
-        moveTimer += Time.deltaTime;
 
         if (attackTimer > attackDelta) {
             spawnEnemyAttack();
@@ -82,21 +80,21 @@ public class GlobalScript : MonoBehaviour
             UFOSpawnTimer = 0.0f;
         }
 
-        if (moveTimer > moveDelta) {
-            moveEnemies();
-            moveTimer = 0.0f;
-        }
+        moveEnemies();
+
     }
 
     void moveEnemies() 
     {
         int count = 0;
+        spawnOrigin.x += movingDirec * moveDelta;
         for (int i = 0; i < row; i++) {
             for (int j = 0; j < col; j++) {
-                if (enemySeq[i, j] != null) {
-                    Vector3 newPos = enemySeq[i, j].transform.position;
-                    newPos.x += movingDirec;
-                    enemySeq[i, j].transform.position = newPos;
+                int life = enemySeq[i, j].GetComponent<EnemyScript>().life;
+                if (life > 0) {
+                    Vector3 spawnPos = new Vector3(j*1.5f, i*1.5f, 0.0f);
+                    enemySeq[i, j].transform.position = spawnPos + spawnOrigin;
+                    enemySeq[i, j].transform.rotation = Quaternion.Euler(new Vector3(90.0f, 0.0f, 0.0f));
                     count++;
                 }
             }
@@ -106,29 +104,38 @@ public class GlobalScript : MonoBehaviour
             return;
         }
 
-        movingStep++;
+        movingStep+= moveDelta;
         if (movingStep > movingBound) {
-            movingStep = 0;
+            movingStep = 0.0f;
             movingDirec *= -1.0f;
         }
     }
 
     void spawnEnemyAttack()
     {
-            Vector3 spawnPos = new Vector3();
+        if (gameState != 0) return;
+        Vector3 spawnPos = new Vector3();
+        bool sucess = false;
+            
+        while (!sucess) {
             int attackingCol = (int) Random.Range(0.0f, 11.0f);
             for (int i = 0; i < row; i++) {
-                if (enemySeq[i, attackingCol] != null) {
+                int life = enemySeq[i, attackingCol].GetComponent<EnemyScript>().life;
+                if (life > 0) {
                     spawnPos = enemySeq[i, attackingCol].transform.position;
+                    sucess = true;
+                    Debug.Log("Attck!" + spawnPos);
                     break;
                 }
             }
-            spawnPos.z -= 1.5f;
-            // instantiate the Bullet
-            GameObject obj = Instantiate(projectilPrefab) as GameObject;
-            obj.transform.position = spawnPos;
-            ProjectileScript p = obj.GetComponent<ProjectileScript>();
-            p.thrust.y = -400.0f;
+        }
+
+        spawnPos.y -= 1.5f;
+        // instantiate the Bullet
+        GameObject obj = Instantiate(projectilPrefab) as GameObject;
+        obj.transform.position = spawnPos;
+        ProjectileScript p = obj.GetComponent<ProjectileScript>();
+        p.thrust.y = -100.0f;
 
 
     }
@@ -139,7 +146,7 @@ public class GlobalScript : MonoBehaviour
             Vector3 spawnPos = spawnOrigin;
 
             spawnPos.x -= 5.0f;
-            spawnPos.z += 7.5f;
+            spawnPos.y += 7.5f;
             // instantiate the Bullet
             GameObject obj = Instantiate(UFOPrefab) as GameObject;
             obj.transform.position = spawnPos;
